@@ -1,0 +1,173 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// User profiles (you, your mom, your dad, etc.)
+model Profile {
+  id        Int      @id @default(autoincrement())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  brokerAccounts BrokerAccount[]
+  orders         Order[]
+  positions      Position[]
+  journals       Journal[]
+  watchlists     Watchlist[]
+}
+
+// Broker accounts linked to profiles
+model BrokerAccount {
+  id           Int      @id @default(autoincrement())
+  brokerName   String   // e.g., "zerodha", "fyers", etc.
+  accountId    String   // Broker-specific account identifier
+  apiKey       String   // Encrypted API key
+  apiSecret    String   // Encrypted API secret
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  // Relations
+  profile      Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profileId    Int
+  orders       Order[]
+  positions    Position[]
+}
+
+// Trading instruments (stocks, indices, etc.)
+model Instrument {
+  id           Int      @id @default(autoincrement())
+  symbol       String
+  exchange     String
+  name         String
+  instrumentType String  // "STOCK", "INDEX", "FUTURE", "OPTION", etc.
+  lotSize      Int?     // For F&O
+  tickSize     Float?   // Minimum price movement
+  expiry       DateTime? // For derivatives
+  strikePrice  Float?   // For options
+  optionType   String?  // "CE", "PE"
+  
+  // Relations
+  watchlistItems WatchlistItem[]
+  alerts         Alert[]
+  orders         Order[]
+  positions      Position[]
+  
+  @@unique([symbol, exchange, instrumentType, expiry, strikePrice, optionType])
+}
+
+// Price alerts
+model Alert {
+  id           Int      @id @default(autoincrement())
+  name         String?
+  instrumentId Int
+  instrument   Instrument @relation(fields: [instrumentId], references: [id])
+  alertType    String   // "PRICE_ABOVE", "PRICE_BELOW", "TIME_FRAME_CLOSE", "PATTERN", etc.
+  value        Float    // The price value to trigger the alert
+  timeFrame    String?  // "1M", "5M", "15M", "1H", etc. for timeframe-based alerts
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  expiryDate   DateTime?
+}
+
+// Orders placed through the platform
+model Order {
+  id              Int      @id @default(autoincrement())
+  profileId       Int
+  profile         Profile  @relation(fields: [profileId], references: [id])
+  brokerAccountId Int
+  brokerAccount   BrokerAccount @relation(fields: [brokerAccountId], references: [id])
+  instrumentId    Int
+  instrument      Instrument @relation(fields: [instrumentId], references: [id])
+  orderType       String   // "MARKET", "LIMIT", etc.
+  orderSide       String   // "BUY", "SELL"
+  quantity        Int
+  price           Float?   // For limit orders
+  stopLoss        Float?
+  target          Float?
+  status          String   // "PENDING", "EXECUTED", "CANCELLED", etc.
+  brokerOrderId   String?  // Order ID assigned by the broker
+  placedAt        DateTime @default(now())
+  executedAt      DateTime?
+  updatedAt       DateTime @updatedAt
+}
+
+// Current positions
+model Position {
+  id              Int      @id @default(autoincrement())
+  profileId       Int
+  profile         Profile  @relation(fields: [profileId], references: [id])
+  brokerAccountId Int
+  brokerAccount   BrokerAccount @relation(fields: [brokerAccountId], references: [id])
+  instrumentId    Int
+  instrument      Instrument @relation(fields: [instrumentId], references: [id])
+  quantity        Int
+  averagePrice    Float
+  side            String   // "LONG", "SHORT"
+  openedAt        DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// Trading journal entries
+model Journal {
+  id              Int      @id @default(autoincrement())
+  profileId       Int
+  profile         Profile  @relation(fields: [profileId], references: [id])
+  title           String?
+  entryDate       DateTime @default(now())
+  // Technical aspects (auto-filled)
+  instrumentSymbol String?
+  entryPrice      Float?
+  exitPrice       Float?
+  quantity        Int?
+  pnl             Float?
+  // Psychological aspects (manually filled)
+  plannedTrade    Boolean?
+  followedStrategy Boolean?
+  emotionalState  String?  // "CALM", "ANXIOUS", "EXCITED", etc.
+  notes           String?
+}
+
+// Watchlists
+model Watchlist {
+  id              Int      @id @default(autoincrement())
+  name            String
+  profileId       Int
+  profile         Profile  @relation(fields: [profileId], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  items           WatchlistItem[]
+}
+
+// Items within watchlists
+model WatchlistItem {
+  id              Int      @id @default(autoincrement())
+  watchlistId     Int
+  watchlist       Watchlist @relation(fields: [watchlistId], references: [id], onDelete: Cascade)
+  instrumentId    Int
+  instrument      Instrument @relation(fields: [instrumentId], references: [id])
+  sortOrder       Int      @default(0)
+  notes           String?
+  
+  @@unique([watchlistId, instrumentId])
+}
+
+// App settings
+model Setting {
+  id              Int      @id @default(autoincrement())
+  key             String   @unique
+  value           String
+  updatedAt       DateTime @updatedAt
+}
