@@ -1,6 +1,8 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
 import * as path from 'path'
 import DatabaseService from './database/profileService'
+import BrokerAccountService from './database/brokerAccountService'
+import { BrokerType } from '../src/types/broker'
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -11,23 +13,25 @@ const isDevelopment = process.env.NODE_ENV !== 'production'
 
 let mainWindow: BrowserWindow | null = null
 let dbService: DatabaseService
+let brokerService: BrokerAccountService
 
-// Initialize database service
+// Initialize database services
 const initializeDatabase = async () => {
-  console.log('🗄️ Initializing database service...')
+  console.log('🗄️ Initializing database services...')
   try {
     dbService = DatabaseService.getInstance()
-    console.log('✅ Database service initialized successfully!')
+    brokerService = BrokerAccountService.getInstance(dbService['prisma']) // Access prisma instance
+    console.log('✅ Database services initialized successfully!')
   } catch (error) {
     console.error('❌ Failed to initialize database:', error)
   }
 }
 
-// Register IPC handlers with real database operations
+// Register IPC handlers for profiles and broker accounts
 const registerIpcHandlers = () => {
-  console.log('🔧 Registering IPC handlers with database operations...')
+  console.log('🔧 Registering IPC handlers...')
   
-  // Get all profiles
+  // ===== PROFILE HANDLERS =====
   ipcMain.handle('profiles:getAll', async () => {
     console.log('📞 IPC: profiles:getAll called')
     try {
@@ -39,12 +43,10 @@ const registerIpcHandlers = () => {
     }
   })
 
-  // Create new profile
   ipcMain.handle('profiles:create', async (_event, name: string) => {
     console.log(`📞 IPC: profiles:create called with name: ${name}`)
     try {
       const profile = await dbService.createProfile(name)
-      console.log('✅ Profile created successfully:', profile)
       return { success: true, data: profile }
     } catch (error) {
       console.error('❌ Failed to create profile:', error)
@@ -52,7 +54,6 @@ const registerIpcHandlers = () => {
     }
   })
 
-  // Update profile
   ipcMain.handle('profiles:update', async (_event, id: number, name: string) => {
     console.log(`📞 IPC: profiles:update called with id: ${id}, name: ${name}`)
     try {
@@ -64,7 +65,6 @@ const registerIpcHandlers = () => {
     }
   })
 
-  // Delete profile
   ipcMain.handle('profiles:delete', async (_event, id: number) => {
     console.log(`📞 IPC: profiles:delete called with id: ${id}`)
     try {
@@ -76,7 +76,6 @@ const registerIpcHandlers = () => {
     }
   })
 
-  // Get profile by ID
   ipcMain.handle('profiles:getById', async (_event, id: number) => {
     console.log(`📞 IPC: profiles:getById called with id: ${id}`)
     try {
@@ -88,7 +87,87 @@ const registerIpcHandlers = () => {
     }
   })
 
-  console.log('✅ All IPC handlers registered with database operations!')
+  // ===== BROKER ACCOUNT HANDLERS =====
+  ipcMain.handle('brokerAccounts:getByProfile', async (_event, profileId: number) => {
+    console.log(`📞 IPC: brokerAccounts:getByProfile called with profileId: ${profileId}`)
+    try {
+      const accounts = await brokerService.getBrokerAccountsByProfile(profileId)
+      return { success: true, data: accounts }
+    } catch (error) {
+      console.error('❌ Failed to get broker accounts:', error)
+      return { success: false, error: (error as Error).message }
+    }
+  })
+
+  ipcMain.handle('brokerAccounts:create', async (_event, data: {
+    profileId: number
+    brokerName: BrokerType
+    displayName: string
+    accountId: string
+    apiKey: string
+    apiSecret: string
+  }) => {
+    console.log(`📞 IPC: brokerAccounts:create called for ${data.brokerName}`)
+    try {
+      const account = await brokerService.createBrokerAccount(data)
+      return { success: true, data: account }
+    } catch (error) {
+      console.error('❌ Failed to create broker account:', error)
+      return { success: false, error: (error as Error).message }
+    }
+  })
+
+  ipcMain.handle('brokerAccounts:update', async (_event, id: number, updates: {
+    displayName?: string
+    accountId?: string
+    apiKey?: string
+    apiSecret?: string
+    isActive?: boolean
+  }) => {
+    console.log(`📞 IPC: brokerAccounts:update called for account ${id}`)
+    try {
+      const account = await brokerService.updateBrokerAccount(id, updates)
+      return { success: true, data: account }
+    } catch (error) {
+      console.error('❌ Failed to update broker account:', error)
+      return { success: false, error: (error as Error).message }
+    }
+  })
+
+  ipcMain.handle('brokerAccounts:delete', async (_event, id: number) => {
+    console.log(`📞 IPC: brokerAccounts:delete called for account ${id}`)
+    try {
+      const account = await brokerService.deleteBrokerAccount(id)
+      return { success: true, data: account }
+    } catch (error) {
+      console.error('❌ Failed to delete broker account:', error)
+      return { success: false, error: (error as Error).message }
+    }
+  })
+
+  ipcMain.handle('brokerAccounts:setDataSource', async (_event, profileId: number, brokerAccountId: number) => {
+    console.log(`📞 IPC: brokerAccounts:setDataSource called for profile ${profileId}, account ${brokerAccountId}`)
+    try {
+      const account = await brokerService.setDataSource(profileId, brokerAccountId)
+      return { success: true, data: account }
+    } catch (error) {
+      console.error('❌ Failed to set data source:', error)
+      return { success: false, error: (error as Error).message }
+    }
+  })
+
+  ipcMain.handle('brokerAccounts:getCurrentDataSource', async (_event, profileId: number) => {
+    console.log(`📞 IPC: brokerAccounts:getCurrentDataSource called for profile ${profileId}`)
+    try {
+      const account = await brokerService.getCurrentDataSource(profileId)
+      return { success: true, data: account }
+    } catch (error) {
+      console.error('❌ Failed to get current data source:', error)
+      return { success: false, error: (error as Error).message }
+    }
+  })
+
+  console.log('✅ All IPC handlers registered successfully!')
 }
 
 const createWindow = async (): Promise<void> => {
@@ -121,8 +200,7 @@ const createWindow = async (): Promise<void> => {
   console.log('✅ Main window created successfully!')
 }
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
+// This method will be called when Electron has finished initialization
 app.whenReady().then(async () => {
   console.log('🚀 Electron app is ready!')
   
@@ -136,8 +214,6 @@ app.whenReady().then(async () => {
   await createWindow()
 
   app.on('activate', function () {
-    // On macOS it's common to re-create a window in the app when the
-    // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 })

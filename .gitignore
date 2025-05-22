@@ -24,12 +24,18 @@ jspm_packages/
 # Optional eslint cache
 .eslintcache
 
-# Environment variables files
+# Environment variables files (IMPORTANT: Never commit these!)
 .env
 .env.development.local
 .env.test.local
 .env.production.local
 .env.local
+
+# API Keys and Sensitive Data (IMPORTANT: Never commit these!)
+*.key
+*.pem
+secrets/
+config/secrets.json
 
 # Mac files
 .DS_Store
@@ -50,10 +56,11 @@ Desktop.ini
 !.vscode/tasks.json
 !.vscode/launch.json
 
-# Database files
+# Database files (contains potentially sensitive data)
 *.sqlite
 *.sqlite3
+/prisma/dev.db
+/prisma/dev.db-journal
 
 # Prisma
-/prisma/migrations/
-/prisma/dev.db
+/prisma/migrations/apidocs/

@@ -27,20 +27,40 @@ model Profile {
 
 // Broker accounts linked to profiles
 model BrokerAccount {
-  id           Int      @id @default(autoincrement())
-  brokerName   String   // e.g., "zerodha", "fyers", etc.
-  accountId    String   // Broker-specific account identifier
-  apiKey       String   // Encrypted API key
-  apiSecret    String   // Encrypted API secret
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id              Int      @id @default(autoincrement())
+  profileId       Int
+  profile         Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  // Broker information
+  brokerName      String   // 'zerodha', 'fyers', 'mstock', 'dhan', 'shoonya', 'upstox'
+  displayName     String   // User-friendly name like "My Zerodha Account"
+  accountId       String   // Broker-specific account identifier
+  
+  // Encrypted API credentials
+  apiKeyEncrypted    String   // Encrypted API key
+  apiSecretEncrypted String   // Encrypted API secret
+  
+  // Account capabilities and status
+  supportsTrading    Boolean  @default(true)   // Can place orders
+  supportsData       Boolean  @default(false)  // Can fetch market data (free)
+  isActive           Boolean  @default(true)   // Account is active
+  isSelectedForData  Boolean  @default(false)  // Currently selected for data (only one should be true)
+  
+  // Usage tracking for data limits
+  dailyDataRequests  Int      @default(0)      // Track daily API calls
+  monthlyDataRequests Int     @default(0)      // Track monthly API calls
+  lastResetDate      DateTime @default(now())  // For resetting counters
+  
+  // Metadata
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
   
   // Relations
-  profile      Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  profileId    Int
   orders       Order[]
   positions    Position[]
+  
+  // Ensure unique broker per profile
+  @@unique([profileId, brokerName])
 }
 
 // Trading instruments (stocks, indices, etc.)
@@ -164,7 +184,7 @@ model WatchlistItem {
   @@unique([watchlistId, instrumentId])
 }
 
-// App settings
+// App settings including data source priorities
 model Setting {
   id              Int      @id @default(autoincrement())
   key             String   @unique

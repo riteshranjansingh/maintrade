@@ -10,6 +10,7 @@ import {
 } from '../../store/slices/profilesSlice';
 import ProfileList from '../../components/profiles/ProfileList';
 import ProfileForm from '../../components/profiles/ProfileForm';
+import BrokerManagement from '../../components/brokers/BrokerManagement';
 import { Profile } from '../../types/profile';
 
 const ProfilesPage: React.FC = () => {
@@ -20,6 +21,7 @@ const ProfilesPage: React.FC = () => {
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProfile, setEditingProfile] = useState<Profile | undefined>(undefined);
+  const [managingBrokersProfile, setManagingBrokersProfile] = useState<Profile | undefined>(undefined);
 
   // Fetch profiles on component mount
   useEffect(() => {
@@ -46,6 +48,10 @@ const ProfilesPage: React.FC = () => {
 
   const handleSelectProfile = (id: number) => {
     dispatch(setSelectedProfile(id));
+  };
+
+  const handleManageBrokers = (profile: Profile) => {
+    setManagingBrokersProfile(profile);
   };
 
   const handleFormSubmit = (name: string) => {
@@ -98,10 +104,19 @@ const ProfilesPage: React.FC = () => {
               onEdit={handleEditProfile}
               onDelete={handleDeleteProfile}
               onSelect={handleSelectProfile}
+              onManageBrokers={handleManageBrokers}
               selectedProfileId={selectedProfileId}
             />
           </div>
         </>
+      )}
+
+      {/* Broker Management Modal */}
+      {managingBrokersProfile && (
+        <BrokerManagement
+          profile={managingBrokersProfile}
+          onClose={() => setManagingBrokersProfile(undefined)}
+        />
       )}
     </div>
   );
