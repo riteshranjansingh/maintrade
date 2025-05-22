@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
 import * as path from 'path'
+import DatabaseService from './database/profileService'
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -9,68 +10,85 @@ if (require('electron-squirrel-startup')) {
 const isDevelopment = process.env.NODE_ENV !== 'production'
 
 let mainWindow: BrowserWindow | null = null
+let dbService: DatabaseService
 
-// Register IPC handlers immediately
+// Initialize database service
+const initializeDatabase = async () => {
+  console.log('🗄️ Initializing database service...')
+  try {
+    dbService = DatabaseService.getInstance()
+    console.log('✅ Database service initialized successfully!')
+  } catch (error) {
+    console.error('❌ Failed to initialize database:', error)
+  }
+}
+
+// Register IPC handlers with real database operations
 const registerIpcHandlers = () => {
-  console.log('🔧 Registering IPC handlers...')
+  console.log('🔧 Registering IPC handlers with database operations...')
   
-  // Mock handlers for now - we'll add real database later
+  // Get all profiles
   ipcMain.handle('profiles:getAll', async () => {
     console.log('📞 IPC: profiles:getAll called')
     try {
-      // Return empty array for now
-      return { success: true, data: [] }
+      const profiles = await dbService.getAllProfiles()
+      return { success: true, data: profiles }
     } catch (error) {
       console.error('❌ Failed to get profiles:', error)
       return { success: false, error: (error as Error).message }
     }
   })
 
+  // Create new profile
   ipcMain.handle('profiles:create', async (_event, name: string) => {
     console.log(`📞 IPC: profiles:create called with name: ${name}`)
     try {
-      // Create a mock profile
-      const mockProfile = {
-        id: Date.now(),
-        name: name,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
-      console.log('✅ Created profile:', mockProfile)
-      return { success: true, data: mockProfile }
+      const profile = await dbService.createProfile(name)
+      console.log('✅ Profile created successfully:', profile)
+      return { success: true, data: profile }
     } catch (error) {
       console.error('❌ Failed to create profile:', error)
       return { success: false, error: (error as Error).message }
     }
   })
 
+  // Update profile
   ipcMain.handle('profiles:update', async (_event, id: number, name: string) => {
     console.log(`📞 IPC: profiles:update called with id: ${id}, name: ${name}`)
     try {
-      const mockProfile = {
-        id: id,
-        name: name,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
-      return { success: true, data: mockProfile }
+      const profile = await dbService.updateProfile(id, name)
+      return { success: true, data: profile }
     } catch (error) {
       console.error('❌ Failed to update profile:', error)
       return { success: false, error: (error as Error).message }
     }
   })
 
+  // Delete profile
   ipcMain.handle('profiles:delete', async (_event, id: number) => {
     console.log(`📞 IPC: profiles:delete called with id: ${id}`)
     try {
-      return { success: true, data: { id } }
+      const profile = await dbService.deleteProfile(id)
+      return { success: true, data: profile }
     } catch (error) {
       console.error('❌ Failed to delete profile:', error)
       return { success: false, error: (error as Error).message }
     }
   })
 
-  console.log('✅ All IPC handlers registered successfully!')
+  // Get profile by ID
+  ipcMain.handle('profiles:getById', async (_event, id: number) => {
+    console.log(`📞 IPC: profiles:getById called with id: ${id}`)
+    try {
+      const profile = await dbService.getProfileById(id)
+      return { success: true, data: profile }
+    } catch (error) {
+      console.error('❌ Failed to get profile by ID:', error)
+      return { success: false, error: (error as Error).message }
+    }
+  })
+
+  console.log('✅ All IPC handlers registered with database operations!')
 }
 
 const createWindow = async (): Promise<void> => {
@@ -105,11 +123,13 @@ const createWindow = async (): Promise<void> => {
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
 app.whenReady().then(async () => {
   console.log('🚀 Electron app is ready!')
   
-  // Register IPC handlers FIRST
+  // Initialize database first
+  await initializeDatabase()
+  
+  // Register IPC handlers
   registerIpcHandlers()
   
   // Then create window
@@ -122,11 +142,22 @@ app.whenReady().then(async () => {
   })
 })
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
-app.on('window-all-closed', () => {
+// Quit when all windows are closed, except on macOS.
+app.on('window-all-closed', async () => {
+  // Clean up database connection
+  if (dbService) {
+    await dbService.disconnect()
+  }
+  
   if (process.platform !== 'darwin') {
     app.quit()
+  }
+})
+
+// Handle app termination
+app.on('before-quit', async () => {
+  console.log('🛑 App is quitting, cleaning up database connection...')
+  if (dbService) {
+    await dbService.disconnect()
   }
 })
