@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, ipcMain } from 'electron';
 import * as path from 'path';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling
@@ -10,6 +10,42 @@ if (require('electron-squirrel-startup')) {
 const isDevelopment = true; // Force development mode for now
 
 let mainWindow: BrowserWindow | null = null;
+
+// Register IPC handlers directly in main.ts to avoid import issues
+const registerIpcHandlers = () => {
+  console.log('=== REGISTERING IPC HANDLERS ===');
+  
+  // Simple test handler
+  ipcMain.handle('profiles:getAll', async () => {
+    console.log('IPC: profiles:getAll called');
+    try {
+      // For now, return empty array
+      return { success: true, data: [] };
+    } catch (error) {
+      console.error('Failed to get profiles:', error);
+      return { success: false, error: (error as Error).message };
+    }
+  });
+
+  ipcMain.handle('profiles:create', async (_event, name: string) => {
+    console.log(`IPC: profiles:create called with name: ${name}`);
+    try {
+      // For now, return a mock profile
+      const mockProfile = {
+        id: Date.now(),
+        name: name,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      return { success: true, data: mockProfile };
+    } catch (error) {
+      console.error('Failed to create profile:', error);
+      return { success: false, error: (error as Error).message };
+    }
+  });
+
+  console.log('=== IPC HANDLERS REGISTERED ===');
+};
 
 const createWindow = async (): Promise<void> => {
   // Create the browser window
@@ -25,6 +61,7 @@ const createWindow = async (): Promise<void> => {
 
   // Log for debugging
   console.log('Electron window created');
+  console.log('Preload path:', path.join(__dirname, 'preload.js'));
 
   // Load the app
   if (isDevelopment) {
@@ -58,9 +95,17 @@ const createWindow = async (): Promise<void> => {
 };
 
 // Create window when Electron is ready
-app.whenReady().then(() => {
-  console.log('Electron app is ready');
-  createWindow();
+app.whenReady().then(async () => {
+  console.log('=== ELECTRON APP IS READY ===');
+  
+  // Register IPC handlers first
+  registerIpcHandlers();
+  
+  // Small delay to ensure everything is ready
+  await new Promise(resolve => setTimeout(resolve, 100));
+  
+  // Create the main window
+  await createWindow();
 
   app.on('activate', () => {
     // On macOS it's common to re-create a window in the app when the
