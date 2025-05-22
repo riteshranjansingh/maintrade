@@ -9,15 +9,23 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "electron:dev": "npm run dev",
+    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && npm run electron:start\"",
+    "electron:start": "electron .",
     "electron:pack": "npm run build && electron-builder",
     "electron:dist": "npm run build && electron-builder --publish=never",
+    "setup": "npm run setup:env && npm run setup:db",
+    "setup:env": "node -e \"if (!require('fs').existsSync('.env')) { require('fs').copyFileSync('.env.example', '.env'); console.log('Created .env file from .env.example'); }\"",
+    "setup:db": "node scripts/setup-database.js",
+    "prisma:generate": "prisma generate",
+    "prisma:push": "prisma db push",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
   },
   "dependencies": {
     "@prisma/client": "^5.9.0",
     "@reduxjs/toolkit": "^2.1.0",
+    "@tensorflow/tfjs": "^4.17.0",
+    "@tensorflow/tfjs-node": "^4.17.0",
     "axios": "^1.6.5",
     "chart.js": "^4.4.1",
     "classnames": "^2.5.1",
@@ -78,7 +86,9 @@
     "vite": "^5.0.12",
     "vite-plugin-electron": "^0.15.5",
     "vite-plugin-electron-renderer": "^0.14.5",
-    "wait-on": "^8.0.3"
+    "wait-on": "^8.0.3",
+    "@types/tensorflow__tfjs": "^4.17.0",
+    "@types/tensorflow__tfjs-node": "^4.17.0"
   },
   "lint-staged": {
     "*.{ts,tsx}": [

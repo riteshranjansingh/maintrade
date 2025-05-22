@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Profile } from '../../types/profile';
-import { BrokerAccount, BrokerType, BROKER_CONFIGS } from '../../types/broker';
+import type { BrokerAccount, BrokerType } from '../../types/broker';
+import { BROKER_CONFIGS } from '../../types/broker';
 
 interface BrokerManagementProps {
   profile: Profile;

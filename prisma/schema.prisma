@@ -156,6 +156,11 @@ model Journal {
   followedStrategy Boolean?
   emotionalState  String?  // "CALM", "ANXIOUS", "EXCITED", etc.
   notes           String?
+  
+  // ML-related fields
+  mlPredictions   MLPrediction[]
+  predictedOutcome String?  // ML-predicted outcome
+  actualOutcome    String?  // Actual outcome for training
 }
 
 // Watchlists
@@ -190,4 +195,46 @@ model Setting {
   key             String   @unique
   value           String
   updatedAt       DateTime @updatedAt
+}
+
+// ML Model configurations
+model MLModel {
+  id              Int      @id @default(autoincrement())
+  name            String
+  type            String   // 'STRATEGY', 'BEHAVIOR', 'ANOMALY', 'RISK', 'PATTERN'
+  config          String   // JSON configuration
+  status          String   // 'TRAINING', 'READY', 'ERROR'
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  predictions     MLPrediction[]
+  trainingSessions MLTrainingSession[]
+}
+
+// ML Training Sessions
+model MLTrainingSession {
+  id              Int      @id @default(autoincrement())
+  modelId         Int
+  model           MLModel  @relation(fields: [modelId], references: [id])
+  startTime       DateTime @default(now())
+  endTime         DateTime?
+  metrics         String?  // JSON metrics
+  status          String   // 'RUNNING', 'COMPLETED', 'FAILED'
+  error           String?
+}
+
+// ML Predictions
+model MLPrediction {
+  id              Int      @id @default(autoincrement())
+  modelId         Int
+  model           MLModel  @relation(fields: [modelId], references: [id])
+  input           String   // JSON input data
+  prediction      String   // JSON prediction
+  confidence      Float
+  createdAt       DateTime @default(now())
+  
+  // Optional relations to other entities
+  journalId       Int?
+  journal         Journal? @relation(fields: [journalId], references: [id])
 }

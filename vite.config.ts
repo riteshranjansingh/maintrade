@@ -52,9 +52,24 @@ export default defineConfig({
     alias: {
       '@': resolve(__dirname, './src'),
     },
+    extensions: ['.js', '.ts', '.jsx', '.tsx', '.json']
   },
   build: {
     sourcemap: true,
-    minify: false
+    minify: false,
+    rollupOptions: {
+      input: {
+        index: resolve(__dirname, 'index.html')
+      }
+    }
+  },
+  optimizeDeps: {
+    include: ['react', 'react-dom'],
+    esbuildOptions: {
+      target: 'esnext'
+    }
+  },
+  esbuild: {
+    target: 'esnext'
   }
 })

@@ -1,9 +1,11 @@
 import { configureStore } from '@reduxjs/toolkit';
 import profilesReducer from './slices/profilesSlice';
+import mlReducer from './slices/mlSlice';
 
 export const store = configureStore({
   reducer: {
     profiles: profilesReducer,
+    ml: mlReducer,
     // Add more reducers as we develop them
   },
 });

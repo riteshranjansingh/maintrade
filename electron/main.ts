@@ -1,9 +1,13 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
 import * as path from 'path'
+import * as dotenv from 'dotenv'
 import DatabaseService from './database/profileService'
 import { BrokerAccountService } from './database/brokerAccountService'
 import { EncryptionService } from './utils/encryption'
 import { BrokerType } from './types/broker'
+
+// Load environment variables
+dotenv.config()
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -21,6 +25,13 @@ let encryptionService: EncryptionService
 const initializeDatabase = async () => {
   console.log('🗄️ Initializing database services...')
   try {
+    // Check if ENCRYPTION_KEY is set
+    if (!process.env.ENCRYPTION_KEY) {
+      console.error('❌ ENCRYPTION_KEY environment variable not set')
+      console.log('💡 Please create a .env file with ENCRYPTION_KEY. Run: npm run setup:env')
+      throw new Error('ENCRYPTION_KEY environment variable is required')
+    }
+
     // Initialize encryption service first
     encryptionService = new EncryptionService()
     
@@ -28,6 +39,10 @@ const initializeDatabase = async () => {
     const encryptionTest = encryptionService.test()
     console.log('🔐 Encryption test:', encryptionTest ? '✅ Passed' : '❌ Failed')
     
+    if (!encryptionTest) {
+      throw new Error('Encryption service failed initialization test')
+    }
+
     // Initialize database service
     dbService = DatabaseService.getInstance()
     
@@ -40,6 +55,16 @@ const initializeDatabase = async () => {
     console.log('✅ Database services initialized successfully!')
   } catch (error) {
     console.error('❌ Failed to initialize database:', error)
+    
+    // Show user-friendly error dialog
+    if (mainWindow) {
+      const { dialog } = require('electron')
+      await dialog.showErrorBox(
+        'Database Initialization Error',
+        `Failed to initialize database: ${(error as Error).message}\n\nPlease check your .env file and run: npm run setup`
+      )
+    }
+    
     throw error
   }
 }
@@ -195,10 +220,19 @@ const createWindow = async (): Promise<void> => {
     height: 800,
     width: 1200,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: isDevelopment 
+        ? path.join(__dirname, 'preload.js')  // Development path
+        : path.join(__dirname, 'preload.js'), // Production path
       nodeIntegration: false,
       contextIsolation: true,
     },
+    show: false, // Don't show until ready
+  })
+
+  // Show window when ready to prevent visual flash
+  mainWindow.once('ready-to-show', () => {
+    mainWindow?.show()
+    console.log('✅ Main window is ready and visible!')
   })
 
   // Load the app.
@@ -206,10 +240,14 @@ const createWindow = async (): Promise<void> => {
     const loadURL = 'http://localhost:5173'
     console.log(`🌐 Loading development URL: ${loadURL}`)
     
-    await mainWindow.loadURL(loadURL)
-    
-    // Open the DevTools.
-    mainWindow.webContents.openDevTools()
+    try {
+      await mainWindow.loadURL(loadURL)
+      
+      // Open the DevTools.
+      mainWindow.webContents.openDevTools()
+    } catch (error) {
+      console.error('❌ Failed to load development URL. Make sure Vite dev server is running:', error)
+    }
   } else {
     mainWindow.loadFile(path.join(__dirname, '../index.html'))
   }
@@ -221,14 +259,21 @@ const createWindow = async (): Promise<void> => {
 app.whenReady().then(async () => {
   console.log('🚀 Electron app is ready!')
   
-  // Initialize database first
-  await initializeDatabase()
-  
-  // Register IPC handlers
-  registerIpcHandlers()
-  
-  // Then create window
-  await createWindow()
+  try {
+    // Create window first (without showing)
+    await createWindow()
+    
+    // Initialize database
+    await initializeDatabase()
+    
+    // Register IPC handlers
+    registerIpcHandlers()
+    
+    console.log('🎉 MainTrade application started successfully!')
+  } catch (error) {
+    console.error('❌ Failed to start application:', error)
+    app.quit()
+  }
 
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

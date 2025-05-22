@@ -14,7 +14,13 @@ export interface BrokerAccount {
   displayName: string // User-friendly name like "My Zerodha Account"
   apiKey: string // This will be encrypted in database
   apiSecret: string // This will be encrypted in database
+  supportsTrading: boolean
+  supportsData: boolean
   isActive: boolean
+  isSelectedForData: boolean
+  dailyDataRequests: number
+  monthlyDataRequests: number
+  lastResetDate: string
   createdAt: string
   updatedAt: string
 }
@@ -57,9 +63,9 @@ export interface BrokerConfig {
 /**
  * Available broker configurations
  */
-export const BROKER_CONFIGS: Record<BrokerType, BrokerConfig> = {
+export const BROKER_CONFIGS = {
   zerodha: {
-    type: 'zerodha',
+    type: 'zerodha' as const,
     name: 'Zerodha (Kite)',
     description: 'India\'s largest retail stockbroker',
     website: 'https://kite.zerodha.com',
@@ -67,7 +73,7 @@ export const BROKER_CONFIGS: Record<BrokerType, BrokerConfig> = {
     iconColor: '#387ed1'
   },
   fyers: {
-    type: 'fyers',
+    type: 'fyers' as const,
     name: 'Fyers',
     description: 'Technology-driven stockbroker',
     website: 'https://fyers.in',
@@ -75,7 +81,7 @@ export const BROKER_CONFIGS: Record<BrokerType, BrokerConfig> = {
     iconColor: '#1976d2'
   },
   mstock: {
-    type: 'mstock',
+    type: 'mstock' as const,
     name: 'Mirae Asset (mStock)',
     description: 'Full-service stockbroker',
     website: 'https://www.miraeassetcm.com',
@@ -83,7 +89,7 @@ export const BROKER_CONFIGS: Record<BrokerType, BrokerConfig> = {
     iconColor: '#e91e63'
   },
   dhan: {
-    type: 'dhan',
+    type: 'dhan' as const,
     name: 'Dhan',
     description: 'Modern trading platform',
     website: 'https://dhan.co',
@@ -91,7 +97,7 @@ export const BROKER_CONFIGS: Record<BrokerType, BrokerConfig> = {
     iconColor: '#4caf50'
   },
   shoonya: {
-    type: 'shoonya',
+    type: 'shoonya' as const,
     name: 'Shoonya (Finvasia)',
     description: 'Zero brokerage trading',
     website: 'https://shoonya.com',
@@ -99,11 +105,11 @@ export const BROKER_CONFIGS: Record<BrokerType, BrokerConfig> = {
     iconColor: '#ff9800'
   },
   upstox: {
-    type: 'upstox',
+    type: 'upstox' as const,
     name: 'Upstox',
     description: 'Technology-first stockbroker',
     website: 'https://upstox.com',
     apiDocsUrl: 'https://upstox.com/developer/api-documentation',
     iconColor: '#6a1b9a'
   }
-}
+} as const;
