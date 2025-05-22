@@ -4,7 +4,7 @@ import * as path from 'path'
 // Create a singleton Prisma client for the main process
 class DatabaseService {
   private static instance: DatabaseService
-  private prisma: PrismaClient
+  public prisma: PrismaClient  // Make public so other services can access it
 
   private constructor() {
     // Initialize Prisma client

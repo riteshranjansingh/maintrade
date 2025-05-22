@@ -9,8 +9,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && npm run electron:start\"",
-    "electron:start": "electron -r ts-node/register electron/main.ts",
+    "electron:dev": "npm run dev",
     "electron:pack": "npm run build && electron-builder",
     "electron:dist": "npm run build && electron-builder --publish=never",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",

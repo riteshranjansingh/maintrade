@@ -1,18 +1,20 @@
 import { PrismaClient } from '@prisma/client'
-import EncryptionService from '../utils/encryption'
-import { BrokerType, BROKER_CONFIGS } from '../../src/types/broker'
+import { EncryptionService } from '../utils/encryption'
+import { BrokerType, BROKER_CONFIGS } from '../types/broker'
 
 class BrokerAccountService {
   private static instance: BrokerAccountService
   private prisma: PrismaClient
+  private encryptionService: EncryptionService
 
-  private constructor(prisma: PrismaClient) {
+  private constructor(prisma: PrismaClient, encryptionService: EncryptionService) {
     this.prisma = prisma
+    this.encryptionService = encryptionService
   }
 
-  public static getInstance(prisma: PrismaClient): BrokerAccountService {
+  public static getInstance(prisma: PrismaClient, encryptionService: EncryptionService): BrokerAccountService {
     if (!BrokerAccountService.instance) {
-      BrokerAccountService.instance = new BrokerAccountService(prisma)
+      BrokerAccountService.instance = new BrokerAccountService(prisma, encryptionService)
     }
     return BrokerAccountService.instance
   }
@@ -22,8 +24,8 @@ class BrokerAccountService {
     return {
       ...account,
       // Decrypt API credentials for frontend
-      apiKey: account.apiKeyEncrypted ? EncryptionService.decrypt(account.apiKeyEncrypted) : '',
-      apiSecret: account.apiSecretEncrypted ? EncryptionService.decrypt(account.apiSecretEncrypted) : '',
+      apiKey: account.apiKeyEncrypted ? this.encryptionService.decrypt(account.apiKeyEncrypted) : '',
+      apiSecret: account.apiSecretEncrypted ? this.encryptionService.decrypt(account.apiSecretEncrypted) : '',
       // Remove encrypted fields from response
       apiKeyEncrypted: undefined,
       apiSecretEncrypted: undefined,
@@ -77,8 +79,8 @@ class BrokerAccountService {
       }
 
       // Encrypt API credentials
-      const apiKeyEncrypted = EncryptionService.encrypt(data.apiKey)
-      const apiSecretEncrypted = EncryptionService.encrypt(data.apiSecret)
+      const apiKeyEncrypted = this.encryptionService.encrypt(data.apiKey)
+      const apiSecretEncrypted = this.encryptionService.encrypt(data.apiSecret)
 
       // Determine broker capabilities
       const brokerConfig = BROKER_CONFIGS[data.brokerName]
@@ -127,10 +129,10 @@ class BrokerAccountService {
       
       // Encrypt new API credentials if provided
       if (updates.apiKey) {
-        updateData.apiKeyEncrypted = EncryptionService.encrypt(updates.apiKey)
+        updateData.apiKeyEncrypted = this.encryptionService.encrypt(updates.apiKey)
       }
       if (updates.apiSecret) {
-        updateData.apiSecretEncrypted = EncryptionService.encrypt(updates.apiSecret)
+        updateData.apiSecretEncrypted = this.encryptionService.encrypt(updates.apiSecret)
       }
 
       const account = await this.prisma.brokerAccount.update({
@@ -255,4 +257,4 @@ class BrokerAccountService {
   }
 }
 
-export default BrokerAccountService
+export { BrokerAccountService }

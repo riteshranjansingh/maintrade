@@ -1,8 +1,9 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
 import * as path from 'path'
 import DatabaseService from './database/profileService'
-import BrokerAccountService from './database/brokerAccountService'
-import { BrokerType } from '../src/types/broker'
+import { BrokerAccountService } from './database/brokerAccountService'
+import { EncryptionService } from './utils/encryption'
+import { BrokerType } from './types/broker'
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -14,16 +15,32 @@ const isDevelopment = process.env.NODE_ENV !== 'production'
 let mainWindow: BrowserWindow | null = null
 let dbService: DatabaseService
 let brokerService: BrokerAccountService
+let encryptionService: EncryptionService
 
 // Initialize database services
 const initializeDatabase = async () => {
   console.log('🗄️ Initializing database services...')
   try {
+    // Initialize encryption service first
+    encryptionService = new EncryptionService()
+    
+    // Test encryption
+    const encryptionTest = encryptionService.test()
+    console.log('🔐 Encryption test:', encryptionTest ? '✅ Passed' : '❌ Failed')
+    
+    // Initialize database service
     dbService = DatabaseService.getInstance()
-    brokerService = BrokerAccountService.getInstance(dbService['prisma']) // Access prisma instance
+    
+    // Initialize broker service with encryption
+    brokerService = BrokerAccountService.getInstance(
+      (dbService as any).prisma, // Access prisma instance
+      encryptionService
+    )
+    
     console.log('✅ Database services initialized successfully!')
   } catch (error) {
     console.error('❌ Failed to initialize database:', error)
+    throw error
   }
 }
 

@@ -12,6 +12,10 @@ export default defineConfig({
       {
         // Main process entry file
         entry: 'electron/main.ts',
+        onstart(options) {
+          // Only restart when main process files change
+          options.startup()
+        },
         vite: {
           build: {
             sourcemap: true,
@@ -27,7 +31,7 @@ export default defineConfig({
         // Preload script entry file
         entry: 'electron/preload.ts',
         onstart(options) {
-          // Restart Electron when preload script changes
+          // Reload renderer when preload script changes
           options.reload()
         },
         vite: {
