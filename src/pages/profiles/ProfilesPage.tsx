@@ -20,40 +20,6 @@ const ProfilesPage: React.FC = () => {
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProfile, setEditingProfile] = useState<Profile | undefined>(undefined);
-  const [debugInfo, setDebugInfo] = useState<string>('');
-
-  // Debug function to check Electron API availability
-  useEffect(() => {
-    console.log('Checking Electron API availability...');
-    console.log('window:', window);
-    console.log('window.electronAPI:', window.electronAPI);
-    
-    if (typeof window !== 'undefined') {
-      if (window.electronAPI) {
-        setDebugInfo('Electron API is available');
-        console.log('Electron API profiles:', window.electronAPI.profiles);
-        
-        // Try to fetch profiles manually for debugging
-        if (window.electronAPI.profiles && window.electronAPI.profiles.getAll) {
-          window.electronAPI.profiles.getAll()
-            .then(result => {
-              console.log('Manual fetch result:', result);
-              setDebugInfo(prev => prev + ' | Manual fetch successful');
-            })
-            .catch(err => {
-              console.error('Manual fetch error:', err);
-              setDebugInfo(prev => prev + ' | Manual fetch failed: ' + err.message);
-            });
-        } else {
-          setDebugInfo('Electron API exists but profiles.getAll is not available');
-        }
-      } else {
-        setDebugInfo('Electron API is not available');
-      }
-    } else {
-      setDebugInfo('Window is not defined');
-    }
-  }, []);
 
   // Fetch profiles on component mount
   useEffect(() => {
@@ -105,12 +71,6 @@ const ProfilesPage: React.FC = () => {
         >
           Add Profile
         </button>
-      </div>
-
-      {/* Debug information */}
-      <div className="mb-4 p-4 bg-yellow-100 rounded-md">
-        <h3 className="font-semibold">Debug Info:</h3>
-        <p>{debugInfo}</p>
       </div>
 
       {error && <div className="mb-4 p-4 text-red-700 bg-red-100 rounded-md">{error}</div>}

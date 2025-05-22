@@ -1,57 +1,50 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer } from 'electron'
 
-console.log('=== PRELOAD SCRIPT VERSION 2.0 STARTING ===');
+console.log('🔧 Preload script starting...')
 
-try {
-  // Test if ipcRenderer is available
-  console.log('ipcRenderer available:', !!ipcRenderer);
-
-  // Create the profiles object
-  const profilesAPI = {
+// Define the API that will be exposed to the renderer process
+const electronAPI = {
+  // App information
+  appName: 'MainTrade',
+  appVersion: '0.1.0',
+  
+  // Profile management methods
+  profiles: {
     getAll: () => {
-      console.log('Calling profiles:getAll');
-      return ipcRenderer.invoke('profiles:getAll');
+      console.log('🔍 Calling profiles:getAll')
+      return ipcRenderer.invoke('profiles:getAll')
     },
-    getById: (id: number) => {
-      console.log('Calling profiles:getById with id:', id);
-      return ipcRenderer.invoke('profiles:getById', id);
-    },
-    create: (name: string) => {
-      console.log('Calling profiles:create with name:', name);
-      return ipcRenderer.invoke('profiles:create', name);
-    },
-    update: (id: number, name: string) => {
-      console.log('Calling profiles:update with id:', id, 'name:', name);
-      return ipcRenderer.invoke('profiles:update', id, name);
-    },
-    delete: (id: number) => {
-      console.log('Calling profiles:delete with id:', id);
-      return ipcRenderer.invoke('profiles:delete', id);
-    },
-  };
-
-  console.log('Created profilesAPI:', profilesAPI);
-
-  // Create the full API object
-  const electronAPI = {
-    // App info
-    appName: 'MainTrade',
-    appVersion: process.env.npm_package_version || '0.1.0',
     
-    // Profile management
-    profiles: profilesAPI
-  };
-
-  console.log('Created full electronAPI:', electronAPI);
-  console.log('electronAPI.profiles:', electronAPI.profiles);
-
-  // Expose the API
-  console.log('Exposing electronAPI to main world...');
-  contextBridge.exposeInMainWorld('electronAPI', electronAPI);
-  console.log('=== electronAPI exposed successfully ===');
-
-} catch (error) {
-  console.error('=== ERROR in preload script ===', error);
+    getById: (id: number) => {
+      console.log('🔍 Calling profiles:getById with id:', id)
+      return ipcRenderer.invoke('profiles:getById', id)
+    },
+    
+    create: (name: string) => {
+      console.log('🔍 Calling profiles:create with name:', name)
+      return ipcRenderer.invoke('profiles:create', name)
+    },
+    
+    update: (id: number, name: string) => {
+      console.log('🔍 Calling profiles:update with id:', id, 'name:', name)
+      return ipcRenderer.invoke('profiles:update', id, name)
+    },
+    
+    delete: (id: number) => {
+      console.log('🔍 Calling profiles:delete with id:', id)
+      return ipcRenderer.invoke('profiles:delete', id)
+    }
+  }
 }
 
-console.log('=== PRELOAD SCRIPT VERSION 2.0 COMPLETED ===');
+// Expose the API to the main world
+try {
+  contextBridge.exposeInMainWorld('electronAPI', electronAPI)
+  console.log('✅ electronAPI exposed successfully!')
+  console.log('📋 Available methods:', Object.keys(electronAPI))
+  console.log('📋 Profile methods:', Object.keys(electronAPI.profiles))
+} catch (error) {
+  console.error('❌ Failed to expose electronAPI:', error)
+}
+
+console.log('✅ Preload script completed!')
